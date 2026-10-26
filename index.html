@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>健活日記 - 全方位健康管理 APP</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="vendor/tailwind.js"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="vendor/fontawesome.css">
+  <!-- Google Fonts Inter & Noto Sans TC -->
+  
+  
+  
+  <!-- Chart.js 趨勢圖表庫 -->
+  <script src="vendor/chart.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Noto Sans TC"', '"PingFang TC"', '"Microsoft JhengHei"', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 自訂虛擬數字鍵盤彈出動畫與版面防遮擋 */
+    .slide-up {
+      animation: slideUpAnim 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes slideUpAnim {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    /* 隱藏滾動條但保持滾動 */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* 鍵盤按鍵微回饋 */
+    .key-btn:active {
+      transform: scale(0.94);
+      background-color: #cbd5e1;
+    }
+    body {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="健活日記">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="description" content="健活日記 — 全方位健康管理 APP：血壓脈搏記錄、BMI、運動與睡眠追蹤，可離線使用。">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex justify-center selection:bg-blue-100">
+
+  <!-- 手機/平板外框容器，在桌面上保持優雅手機居中比例 -->
+  <div class="w-full max-w-md bg-white min-h-screen flex flex-col shadow-2xl relative overflow-hidden pb-20">
+
+    <!-- 頂部標題列 -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4 flex items-center justify-between sticky top-0 z-20 shadow-md">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-heart-pulse text-2xl text-rose-300 animate-pulse"></i>
+        <h1 class="font-bold text-lg tracking-wide" id="page-title">血壓與心率記錄</h1>
+      </div>
+      <div class="flex items-center space-x-2">
+        <!-- 個人基本資料設定按鈕 -->
+        <button onclick="openProfileModal()" class="text-xs bg-white/20 hover:bg-white/30 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center transition">
+          <i class="fa-solid fa-user-gear mr-1 text-amber-300"></i>
+          <span id="header-user-tag">個人檔案</span>
+        </button>
+        <div class="text-xs bg-black/20 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center">
+          <i class="fa-regular fa-clock mr-1"></i>
+          <span id="header-clock">--:--</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主內容區 (多頁切換) -->
+    <main class="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar" id="main-content">
+
+      <!-- ================= 第一頁：血壓與心跳 ================= -->
+      <section id="tab-bp" class="tab-pane space-y-4">
+
+        <!-- 個人生理資訊摘要橫幅 (自動換算年齡、BMI 與個人健康狀態) -->
+        <div class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-2xl p-3.5 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <span id="user-badge-gender" class="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">男性</span>
+              <span id="user-disp-age" class="text-xs font-bold text-slate-700">-- 歲</span>
+            </div>
+            <button onclick="openProfileModal()" class="text-[11px] text-blue-600 hover:underline font-semibold flex items-center">
+              <i class="fa-solid fa-pen-to-square mr-1"></i>修改資料
+            </button>
+          </div>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-white/80 p-2 rounded-xl border border-indigo-50">
+              <span class="text-[10px] text-slate-400 block">目前體重</span>
+              <span id="user-disp-weight" class="font-bold text-slate-800 text-sm">-- kg</span>
+            </div>
+            <div class="bg-white/80 p-2 rounded-xl border border-indigo-50">
+              <span class="text-[10px] text-slate-400 block">身體質量 (BMI)</span>
+              <span id="user-disp-bmi" class="font-bold text-slate-800 text-sm">--</span>
+            </div>
+            <div class="bg-white/80 p-2 rounded-xl border border-indigo-50">
+              <span class="text-[10px] text-slate-400 block">體位狀態</span>
+              <span id="user-disp-bmi-status" class="font-bold text-emerald-600 text-sm">--</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 量測時間區塊 -->
+        <div class="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <span class="text-xs font-semibold text-blue-600 block uppercase tracking-wider">量測時間戳記</span>
+            <input type="datetime-local" id="bp-datetime" class="bg-transparent font-bold text-slate-800 text-sm mt-0.5 focus:outline-none">
+          </div>
+          <button onclick="refreshBPTimeToNow()" class="text-xs text-blue-600 bg-white border border-blue-200 px-2.5 py-1.5 rounded-xl shadow-sm hover:bg-blue-50 active:scale-95 transition">
+            <i class="fa-solid fa-arrows-rotate mr-1"></i>設為當前
+          </button>
+        </div>
+
+        <!-- 3個大數值輸入欄位 (高壓/低壓/心跳) -->
+        <div class="grid grid-cols-3 gap-2.5">
+          <!-- 收縮壓 (高壓) -->
+          <div id="box-systolic" onclick="activateCustomNumpad('systolic')" 
+               class="bg-white border-2 border-slate-200 rounded-2xl p-3 text-center cursor-pointer transition shadow-sm hover:border-blue-400">
+            <span class="text-xs text-slate-500 font-medium block">收縮壓 (高壓)</span>
+            <div class="text-2xl font-black text-rose-600 my-1 h-9 flex items-center justify-center" id="val-systolic">--</div>
+            <span class="text-[10px] text-slate-400">mmHg</span>
+          </div>
+
+          <!-- 舒張壓 (低壓) -->
+          <div id="box-diastolic" onclick="activateCustomNumpad('diastolic')" 
+               class="bg-white border-2 border-slate-200 rounded-2xl p-3 text-center cursor-pointer transition shadow-sm hover:border-blue-400">
+            <span class="text-xs text-slate-500 font-medium block">舒張壓 (低壓)</span>
+            <div class="text-2xl font-black text-indigo-600 my-1 h-9 flex items-center justify-center" id="val-diastolic">--</div>
+            <span class="text-[10px] text-slate-400">mmHg</span>
+          </div>
+
+          <!-- 心跳 (脈搏) -->
+          <div id="box-pulse" onclick="activateCustomNumpad('pulse')" 
+               class="bg-white border-2 border-slate-200 rounded-2xl p-3 text-center cursor-pointer transition shadow-sm hover:border-blue-400">
+            <span class="text-xs text-slate-500 font-medium block">心跳 (脈搏)</span>
+            <div class="text-2xl font-black text-emerald-600 my-1 h-9 flex items-center justify-center" id="val-pulse">--</div>
+            <span class="text-[10px] text-slate-400">BPM</span>
+          </div>
+        </div>
+
+        <!-- 即時血壓狀態提示條 -->
+        <div id="bp-status-badge" class="hidden rounded-xl p-3 text-center text-sm font-semibold transition"></div>
+
+        <!-- 儲存記錄按鈕 -->
+        <button onclick="saveBPRecord()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-500/25 active:scale-[0.98] transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-check"></i>
+          <span>儲存今日量測記錄</span>
+        </button>
+
+        <!-- ★ 血壓歷史趨勢折線圖 (Chart.js) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-chart-line mr-1.5 text-blue-600"></i>血壓週期趨勢曲線圖
+            </h3>
+            <span class="text-[10px] text-slate-400">收縮壓 / 舒張壓趨勢</span>
+          </div>
+          <!-- 圖表容器 -->
+          <div class="w-full h-48 relative">
+            <canvas id="bp-trend-chart"></canvas>
+            <div id="chart-empty-msg" class="absolute inset-0 flex items-center justify-center text-xs text-slate-400 hidden bg-white/90">
+              累積 2 筆以上記錄即可顯示變化曲線圖
+            </div>
+          </div>
+          <div class="flex items-center justify-center space-x-4 text-[11px] pt-1 text-slate-500">
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1"></span>收縮壓 (高壓)</span>
+            <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500 mr-1"></span>舒張壓 (低壓)</span>
+            <span class="flex items-center text-slate-400"><span class="w-2 h-0.5 border-t border-dashed border-slate-400 mr-1"></span>標準警戒線 (120/80)</span>
+          </div>
+        </div>
+
+        <!-- 歷史數據小卡 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-3 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider"><i class="fa-solid fa-clock-rotate-left mr-1 text-blue-500"></i>最近血壓記錄</h3>
+            <span class="text-[11px] text-slate-400" id="bp-count-label">0 筆記錄</span>
+          </div>
+          <div id="bp-history-list" class="space-y-2 max-h-36 overflow-y-auto text-xs divide-y divide-slate-100">
+            <div class="text-slate-400 text-center py-4">尚無記錄，點選上方卡片以鍵盤輸入</div>
+          </div>
+        </div>
+
+        <!-- 年齡與性別心跳參考表 (互動式，並自動標註用戶區間) -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center">
+              <i class="fa-solid fa-chart-simple text-rose-500 mr-1.5"></i>
+              年齡與性別安靜心率參照表
+            </h3>
+            <span id="user-matched-tag" class="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded-full font-bold">已標註您的年齡層</span>
+          </div>
+
+          <!-- 性別切換按鈕 -->
+          <div class="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+            <button id="gender-btn-m" onclick="togglePulseTableGender('male')" class="py-1.5 rounded-lg bg-white text-blue-600 shadow-sm transition">男性 (Male)</button>
+            <button id="gender-btn-f" onclick="togglePulseTableGender('female')" class="py-1.5 rounded-lg text-slate-500 transition">女性 (Female)</button>
+          </div>
+
+          <!-- 參照數據表格 -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-slate-400 border-b border-slate-100">
+                  <th class="pb-2 font-medium">年齡群組</th>
+                  <th class="pb-2 font-medium text-emerald-600">優良</th>
+                  <th class="pb-2 font-medium text-blue-600">正常/理想</th>
+                  <th class="pb-2 font-medium text-amber-600">偏高注意</th>
+                </tr>
+              </thead>
+              <tbody id="pulse-ref-tbody" class="divide-y divide-slate-50 text-slate-600 font-medium">
+                <!-- 動態注入表格 -->
+              </tbody>
+            </table>
+          </div>
+          <p class="text-[11px] text-slate-400 leading-relaxed">
+            * 備註：依據您的個人年齡與性別，已自動以粉藍底色反白標記適合您的參考區間。
+          </p>
+        </div>
+      </section>
+
+
+      <!-- ================= 第二頁：運動與步數 ================= -->
+      <section id="tab-workout" class="tab-pane hidden space-y-4">
+        <!-- Google Fit 串接狀態卡片 -->
+        <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-4 text-white shadow-lg shadow-emerald-500/20">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+                <i class="fa-brands fa-google text-lg"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-sm">Google Fit 步數串接</h3>
+                <p class="text-[11px] text-emerald-100" id="fit-sync-status">未連接健康服務</p>
+              </div>
+            </div>
+            <button id="fit-connect-btn" onclick="toggleGoogleFitSync()" class="text-xs bg-white text-emerald-700 font-bold px-3 py-1.5 rounded-xl shadow hover:bg-emerald-50 active:scale-95 transition">
+              連接同步
+            </button>
+          </div>
+
+          <!-- 步數環狀進度指示 -->
+          <div class="mt-4 pt-3 border-t border-white/20 flex items-center justify-between">
+            <div>
+              <span class="text-xs text-emerald-100 block">今日累計步數</span>
+              <div class="text-3xl font-black tracking-tight" id="disp-steps">0</div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-emerald-100">目標: 10,000 步</span>
+              <div class="w-28 bg-black/20 rounded-full h-2.5 mt-1 overflow-hidden">
+                <div id="steps-progress-bar" class="bg-white h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 手動更新今日活動輸入表單 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-800 flex items-center">
+            <i class="fa-solid fa-person-running text-emerald-500 mr-2"></i>記錄今日運動
+          </h3>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">今日手動步數 (步)</label>
+              <div class="relative">
+                <input type="number" id="input-steps" placeholder="例如: 6500" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+                <button onclick="applyManualSteps()" class="absolute right-2 top-2 bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-lg">套用</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">運動類型</label>
+                <select id="workout-type" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-emerald-500">
+                  <option value="快走">🚶 快走 / 散步</option>
+                  <option value="慢跑">🏃 慢跑 / 路跑</option>
+                  <option value="騎單車">🚴 戶外單車 / 飛輪</option>
+                  <option value="游泳">🏊 游泳</option>
+                  <option value="重訓">🏋️ 核心肌力訓練</option>
+                  <option value="瑜珈">🧘 瑜珈 / 伸展</option>
+                  <option value="其他">⚽ 其他球類運動</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">運動時間 (分鐘)</label>
+                <input type="number" id="workout-duration" placeholder="例如: 45" 
+                       class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">運動心得或補充 (選填)</label>
+              <input type="text" id="workout-note" placeholder="例如：公園慢跑流很多汗，精神很好！" 
+                     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-700 focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <button onclick="saveWorkoutRecord()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md shadow-emerald-500/20 active:scale-95 transition text-sm">
+              <i class="fa-solid fa-plus mr-1"></i>新增運動紀錄
+            </button>
+          </div>
+        </div>
+
+        <!-- 歷史運動清單 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span><i class="fa-solid fa-list-check mr-1 text-emerald-500"></i>近期運動歷史</span>
+            <span id="workout-count-label" class="text-[11px] text-slate-400 font-normal">0 筆記錄</span>
+          </h3>
+          <div id="workout-history-list" class="space-y-2 max-h-48 overflow-y-auto text-xs divide-y divide-slate-100">
+            <div class="text-slate-400 text-center py-4">今天還沒有運動記錄，趕快動一動吧！</div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ================= 第三頁：健康檢查報告 ================= -->
+      <section id="tab-report" class="tab-pane hidden space-y-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center">
+              <i class="fa-solid fa-file-medical text-cyan-600 mr-2"></i>建檔健檢報告
+            </h3>
+            <span class="text-[11px] text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-full font-medium">支援文字與照片</span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">檢查日期</label>
+                <input type="date" id="report-date" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">健檢機構 / 醫院</label>
+                <input type="text" id="report-org" placeholder="如: 國泰健康管理" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none">
+              </div>
+            </div>
+
+            <!-- 照片上傳區 -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">上傳報告單照片</label>
+              <div class="border-2 border-dashed border-slate-200 rounded-xl p-3 text-center bg-slate-50/50 hover:bg-slate-50 cursor-pointer relative" onclick="document.getElementById('report-file-input').click()">
+                <input type="file" id="report-file-input" accept="image/*" class="hidden" onchange="previewReportImage(event)">
+                <div id="image-upload-placeholder" class="py-2">
+                  <i class="fa-solid fa-camera text-2xl text-slate-400 mb-1"></i>
+                  <p class="text-xs text-slate-500">點此拍照或選擇相簿中的報告照片</p>
+                </div>
+                <div id="image-preview-container" class="hidden relative inline-block">
+                  <img id="image-preview" src="#" alt="健檢照片預覽" class="max-h-36 rounded-lg shadow-sm border mx-auto">
+                  <button type="button" onclick="clearReportImage(event)" class="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                    &times;
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 打字輸入數值/異常說明 -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">文字記錄 / 數據重點 / 醫師總評</label>
+              <textarea id="report-text-notes" rows="3" placeholder="例如：飯前血糖 98 (正常)、低密度膽固醇 LDL 135 (紅字需注意飲食)、肝指數 AST/ALT 正常..." 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500"></textarea>
+            </div>
+
+            <button onclick="saveHealthReport()" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 rounded-xl shadow-md shadow-cyan-500/20 active:scale-95 transition text-sm">
+              <i class="fa-solid fa-cloud-arrow-up mr-1"></i>保存健檢檔案
+            </button>
+          </div>
+        </div>
+
+        <!-- 歷史健檢列表 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span><i class="fa-solid fa-folder-open mr-1 text-cyan-600"></i>已歸檔健檢歷史</span>
+            <span id="report-count-label" class="text-[11px] text-slate-400 font-normal">0 份檔案</span>
+          </h3>
+          <div id="report-history-list" class="space-y-3 max-h-64 overflow-y-auto text-xs">
+            <div class="text-slate-400 text-center py-4">目前尚無上傳的健檢報告</div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ================= 第四頁：看醫生就診紀錄 ================= -->
+      <section id="tab-doctor" class="tab-pane hidden space-y-4">
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-sm text-slate-800 flex items-center">
+              <i class="fa-solid fa-user-doctor text-purple-600 mr-2"></i>新增就醫看病記錄
+            </h3>
+            <span class="text-[11px] text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full font-medium">門診與處方</span>
+          </div>
+
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">就醫日期與時間</label>
+                <input type="datetime-local" id="doc-datetime" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs font-bold text-slate-800 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">診所醫院 / 科別</label>
+                <input type="text" id="doc-clinic" placeholder="例如: 仁愛家醫科" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">看病原因 / 不適症狀</label>
+              <input type="text" id="doc-reason" placeholder="例如: 連續三天乾咳、微發燒 37.8度、喉嚨刺痛" 
+                     class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-purple-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">醫師診斷與處方籤內容</label>
+              <textarea id="doc-prescription" rows="3" placeholder="例如: 上呼吸道急性感染。開立消炎止痛藥、化痰藥早晚飯後吃 3 天，交代多喝溫水避免油炸。" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-purple-500"></textarea>
+            </div>
+
+            <button onclick="saveDoctorVisit()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl shadow-md shadow-purple-500/20 active:scale-95 transition text-sm">
+              <i class="fa-solid fa-notes-medical mr-1"></i>儲存就診紀錄
+            </button>
+          </div>
+        </div>
+
+        <!-- 歷史就醫卡片列表 -->
+        <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+          <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span><i class="fa-solid fa-stethoscope mr-1 text-purple-600"></i>就醫與處方履歷</span>
+            <span id="doctor-count-label" class="text-[11px] text-slate-400 font-normal">0 次就診</span>
+          </h3>
+          <div id="doctor-history-list" class="space-y-3 max-h-64 overflow-y-auto text-xs">
+            <div class="text-slate-400 text-center py-4">尚無就診紀錄</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= 彈出式大按鈕計算機數字鍵盤 (針對血壓輸入) ================= -->
+    <div id="calculator-keyboard" class="hidden fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-800 text-white z-40 rounded-t-3xl shadow-2xl p-4 pb-6 border-t border-slate-700 slide-up">
+      <!-- 鍵盤頂部資訊欄 -->
+      <div class="flex items-center justify-between pb-3 mb-2 border-b border-slate-700 px-1">
+        <div class="flex items-center space-x-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-xs text-slate-300 font-medium" id="numpad-target-name">正在輸入：收縮壓 (高壓)</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="nextNumpadField()" class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-2.5 py-1 rounded-lg">
+            下一個 <i class="fa-solid fa-arrow-right ml-1"></i>
+          </button>
+          <button onclick="closeCustomNumpad()" class="text-slate-400 hover:text-white p-1 text-lg">
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 計算機按鍵網格 (超大按鈕易操作) -->
+      <div class="grid grid-cols-3 gap-2.5">
+        <button onclick="pressNumKey('1')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">1</button>
+        <button onclick="pressNumKey('2')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">2</button>
+        <button onclick="pressNumKey('3')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">3</button>
+
+        <button onclick="pressNumKey('4')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">4</button>
+        <button onclick="pressNumKey('5')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">5</button>
+        <button onclick="pressNumKey('6')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">6</button>
+
+        <button onclick="pressNumKey('7')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">7</button>
+        <button onclick="pressNumKey('8')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">8</button>
+        <button onclick="pressNumKey('9')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">9</button>
+
+        <button onclick="clearCurrentNumpad()" class="key-btn bg-rose-900/40 text-rose-300 hover:bg-rose-900/60 rounded-2xl py-3.5 text-base font-bold transition flex items-center justify-center">
+          <i class="fa-solid fa-eraser mr-1"></i>清除
+        </button>
+        <button onclick="pressNumKey('0')" class="key-btn bg-slate-700 hover:bg-slate-600 rounded-2xl py-3.5 text-2xl font-bold transition shadow">0</button>
+        <button onclick="backspaceNumKey()" class="key-btn bg-slate-700 hover:bg-slate-600 text-amber-400 rounded-2xl py-3.5 text-xl font-bold transition flex items-center justify-center">
+          <i class="fa-solid fa-delete-left"></i>
+        </button>
+      </div>
+
+      <!-- 完成按鈕 -->
+      <button onclick="closeCustomNumpad()" class="w-full mt-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm transition">
+        完成輸入
+      </button>
+    </div>
+
+    <!-- 簡易浮動提示 Toast (取代 alert) -->
+    <div id="toast-msg" class="hidden fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-slate-900/90 text-white text-xs px-4 py-2.5 rounded-full shadow-xl transition backdrop-blur-sm pointer-events-none">
+      訊息通知
+    </div>
+
+    <!-- ================= 個人基本檔案設定 Modal 彈窗 ================= -->
+    <div id="profile-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between border-b pb-2">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-id-card text-blue-600 text-lg"></i>
+            <h3 class="font-bold text-slate-800 text-base">個人健康檔案設定</h3>
+          </div>
+          <button onclick="closeProfileModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold p-1">&times;</button>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <!-- 性別 -->
+          <div>
+            <label class="block font-semibold text-slate-500 mb-1">生理性別</label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="flex items-center justify-center p-2.5 border rounded-xl cursor-pointer has-[:checked]:border-blue-600 has-[:checked]:bg-blue-50">
+                <input type="radio" name="profile-gender" value="male" id="gender-opt-m" class="mr-1.5" checked> 男性
+              </label>
+              <label class="flex items-center justify-center p-2.5 border rounded-xl cursor-pointer has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50">
+                <input type="radio" name="profile-gender" value="female" id="gender-opt-f" class="mr-1.5"> 女性
+              </label>
+            </div>
+          </div>
+
+          <!-- 出生年與月 -->
+          <div>
+            <label class="block font-semibold text-slate-500 mb-1">出生年 / 月份</label>
+            <input type="month" id="profile-birth-input" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-600">
+          </div>
+
+          <!-- 身高與體重 -->
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-semibold text-slate-500 mb-1">身高 (cm)</label>
+              <input type="number" id="profile-height-input" placeholder="如: 172" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-600">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-500 mb-1">體重 (kg)</label>
+              <input type="number" step="0.1" id="profile-weight-input" placeholder="如: 68.5" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:border-blue-600">
+            </div>
+          </div>
+
+          <!-- 即時計算預覽 -->
+          <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 text-slate-600 space-y-1">
+            <div class="flex justify-between">
+              <span>換算實際年齡：</span>
+              <span id="modal-calc-age" class="font-bold text-blue-600">-- 歲</span>
+            </div>
+            <div class="flex justify-between">
+              <span>BMI 身體質量：</span>
+              <span id="modal-calc-bmi" class="font-bold text-indigo-600">--</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex space-x-2 pt-2">
+          <button onclick="closeProfileModal()" class="w-1/2 py-2.5 bg-slate-100 text-slate-600 font-semibold rounded-xl text-xs">取消</button>
+          <button onclick="saveProfile()" class="w-1/2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20">儲存資料</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= 底部導覽 TAB 按鈕列 ================= -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 flex justify-around items-center z-30 shadow-lg">
+      <!-- Tab 1: 血壓 -->
+      <button onclick="switchTab('bp')" id="nav-btn-bp" class="nav-tab-btn flex flex-col items-center flex-1 py-1 text-blue-600 transition">
+        <i class="fa-solid fa-heart-pulse text-lg mb-0.5"></i>
+        <span class="text-[11px] font-bold">量測血壓</span>
+      </button>
+
+      <!-- Tab 2: 運動步數 -->
+      <button onclick="switchTab('workout')" id="nav-btn-workout" class="nav-tab-btn flex flex-col items-center flex-1 py-1 text-slate-400 transition">
+        <i class="fa-solid fa-person-running text-lg mb-0.5"></i>
+        <span class="text-[11px] font-medium">運動步數</span>
+      </button>
+
+      <!-- Tab 3: 健檢報告 -->
+      <button onclick="switchTab('report')" id="nav-btn-report" class="nav-tab-btn flex flex-col items-center flex-1 py-1 text-slate-400 transition">
+        <i class="fa-solid fa-file-waveform text-lg mb-0.5"></i>
+        <span class="text-[11px] font-medium">健檢報告</span>
+      </button>
+
+      <!-- Tab 4: 看診記錄 -->
+      <button onclick="switchTab('doctor')" id="nav-btn-doctor" class="nav-tab-btn flex flex-col items-center flex-1 py-1 text-slate-400 transition">
+        <i class="fa-solid fa-hospital-user text-lg mb-0.5"></i>
+        <span class="text-[11px] font-medium">就醫病歷</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <script>
+    /* ==============================================================
+       健康心率參考資料庫 (按年齡與性別區分)
+       ============================================================== */
+    const pulseReferenceData = {
+      male: [
+        { minAge: 18, maxAge: 25, label: "18-25 歲", athletic: "49-55", normal: "62-73", high: "82+" },
+        { minAge: 26, maxAge: 35, label: "26-35 歲", athletic: "49-54", normal: "62-73", high: "82+" },
+        { minAge: 36, maxAge: 45, label: "36-45 歲", athletic: "50-56", normal: "63-75", high: "83+" },
+        { minAge: 46, maxAge: 55, label: "46-55 歲", athletic: "50-57", normal: "64-76", high: "84+" },
+        { minAge: 56, maxAge: 65, label: "56-65 歲", athletic: "51-56", normal: "62-75", high: "82+" },
+        { minAge: 66, maxAge: 120, label: "65 歲以上", athletic: "50-55", normal: "62-73", high: "80+" }
+      ],
+      female: [
+        { minAge: 18, maxAge: 25, label: "18-25 歲", athletic: "54-60", normal: "66-78", high: "85+" },
+        { minAge: 26, maxAge: 35, label: "26-35 歲", athletic: "54-59", normal: "65-76", high: "83+" },
+        { minAge: 36, maxAge: 45, label: "36-45 歲", athletic: "54-59", normal: "65-78", high: "85+" },
+        { minAge: 46, maxAge: 55, label: "46-55 歲", athletic: "54-60", normal: "66-77", high: "84+" },
+        { minAge: 56, maxAge: 65, label: "56-65 歲", athletic: "54-59", normal: "64-76", high: "84+" },
+        { minAge: 66, maxAge: 120, label: "65 歲以上", athletic: "54-59", normal: "64-76", high: "84+" }
+      ]
+    };
+
+    /* ==============================================================
+       全域應用狀態 (In-Memory State)
+       ============================================================== */
+    const appState = {
+      activeTab: 'bp',
+      activeNumpadField: null,
+      bpValues: {
+        systolic: '',
+        diastolic: '',
+        pulse: ''
+      },
+      // 使用者個人生理基本資料
+      userProfile: {
+        gender: 'male',
+        birthYearMonth: '1988-06',
+        height: 175, // cm
+        weight: 68.5  // kg
+      },
+      calculatedAge: 0,
+      calculatedBMI: 0,
+      currentPulseGender: 'male',
+      googleFitConnected: false,
+      dailySteps: 4820,
+      bpRecords: [],
+      workoutRecords: [],
+      healthReports: [],
+      doctorVisits: [],
+      uploadedReportBase64: null,
+      bpChartInstance: null
+    };
+
+    /* ==============================================================
+       初始化與時鐘更新
+       ============================================================== */
+    window.onload = function() {
+      // 1. 初始化即時時鐘
+      updateHeaderClock();
+      setInterval(updateHeaderClock, 1000);
+
+      // 2. 初始化第一頁預設量測時間為開啟 APP 的當前時分
+      refreshBPTimeToNow();
+
+      // 3. 初始化預設報告日期為今天
+      const todayDate = new Date().toISOString().split('T')[0];
+      document.getElementById('report-date').value = todayDate;
+      refreshDoctorTimeToNow();
+
+      // 4. 計算並更新使用者年齡與 BMI
+      recalculateUserProfileMetrics();
+
+      // 5. 載入示範數據增加體驗感 (包含多筆歷史記錄供趨勢圖展示)
+      initSampleData();
+
+      // 6. 初始化折線趨勢圖
+      initBPTrendChart();
+
+      // 7. 渲染心率對照表
+      renderPulseReferenceTable();
+
+      // 8. 渲染運動步數進度條
+      updateStepsDisplay();
+
+      // 9. 監聽個人資料彈窗輸入以即時計算
+      setupProfileModalListeners();
+    };
+
+    function updateHeaderClock() {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('header-clock').textContent = `${h}:${m}`;
+    }
+
+    /* ==============================================================
+       個人資料換算年齡、BMI 與體位邏輯
+       ============================================================== */
+    function recalculateUserProfileMetrics() {
+      const profile = appState.userProfile;
+      const now = new Date();
+      
+      // 1. 年齡換算
+      if (profile.birthYearMonth) {
+        const [bYear, bMonth] = profile.birthYearMonth.split('-').map(Number);
+        let age = now.getFullYear() - bYear;
+        const curMonth = now.getMonth() + 1;
+        if (curMonth < bMonth) {
+          age -= 1;
+        }
+        appState.calculatedAge = Math.max(0, age);
+      } else {
+        appState.calculatedAge = 35;
+      }
+
+      // 2. BMI 換算: weight (kg) / [height (m)]^2
+      if (profile.height > 0 && profile.weight > 0) {
+        const heightM = profile.height / 100;
+        appState.calculatedBMI = parseFloat((profile.weight / (heightM * heightM)).toFixed(1));
+      } else {
+        appState.calculatedBMI = 22.4;
+      }
+
+      // 3. 體位判定
+      let bmiStatus = "正常標準";
+      let bmiColor = "text-emerald-600";
+      if (appState.calculatedBMI < 18.5) {
+        bmiStatus = "體重過輕";
+        bmiColor = "text-amber-500";
+      } else if (appState.calculatedBMI >= 24 && appState.calculatedBMI < 27) {
+        bmiStatus = "過重注意";
+        bmiColor = "text-amber-600";
+      } else if (appState.calculatedBMI >= 27) {
+        bmiStatus = "輕度肥胖";
+        bmiColor = "text-rose-600";
+      }
+
+      // 4. 更新 UI 呈現
+      document.getElementById('user-badge-gender').textContent = profile.gender === 'male' ? '男性' : '女性';
+      document.getElementById('user-badge-gender').className = `text-xs font-bold px-2 py-0.5 rounded-full ${profile.gender === 'male' ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700'}`;
+      document.getElementById('user-disp-age').textContent = `${appState.calculatedAge} 歲`;
+      document.getElementById('user-disp-weight').textContent = `${profile.weight} kg`;
+      document.getElementById('user-disp-bmi').textContent = appState.calculatedBMI;
+      
+      const bmiEl = document.getElementById('user-disp-bmi-status');
+      bmiEl.textContent = bmiStatus;
+      bmiEl.className = `font-bold text-sm ${bmiColor}`;
+
+      // 連動心率對照表的性別
+      appState.currentPulseGender = profile.gender;
+      updateGenderBtnVisuals();
+    }
+
+    function openProfileModal() {
+      const p = appState.userProfile;
+      if (p.gender === 'female') {
+        document.getElementById('gender-opt-f').checked = true;
+      } else {
+        document.getElementById('gender-opt-m').checked = true;
+      }
+      document.getElementById('profile-birth-input').value = p.birthYearMonth;
+      document.getElementById('profile-height-input').value = p.height;
+      document.getElementById('profile-weight-input').value = p.weight;
+      
+      updateModalLiveCalculations();
+      document.getElementById('profile-modal').classList.remove('hidden');
+    }
+
+    function closeProfileModal() {
+      document.getElementById('profile-modal').classList.add('hidden');
+    }
+
+    function setupProfileModalListeners() {
+      ['profile-birth-input', 'profile-height-input', 'profile-weight-input'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateModalLiveCalculations);
+      });
+      document.querySelectorAll('input[name="profile-gender"]').forEach(radio => {
+        radio.addEventListener('change', updateModalLiveCalculations);
+      });
+    }
+
+    function updateModalLiveCalculations() {
+      const birth = document.getElementById('profile-birth-input').value;
+      const h = parseFloat(document.getElementById('profile-height-input').value) || 0;
+      const w = parseFloat(document.getElementById('profile-weight-input').value) || 0;
+
+      let age = "--";
+      if (birth) {
+        const [bYear, bMonth] = birth.split('-').map(Number);
+        const now = new Date();
+        let a = now.getFullYear() - bYear;
+        if (now.getMonth() + 1 < bMonth) a -= 1;
+        age = `${Math.max(0, a)} 歲`;
+      }
+
+      let bmi = "--";
+      if (h > 0 && w > 0) {
+        bmi = (w / Math.pow(h / 100, 2)).toFixed(1);
+      }
+
+      document.getElementById('modal-calc-age').textContent = age;
+      document.getElementById('modal-calc-bmi').textContent = bmi;
+    }
+
+    function saveProfile() {
+      const selectedGender = document.querySelector('input[name="profile-gender"]:checked').value;
+      const birth = document.getElementById('profile-birth-input').value;
+      const h = parseFloat(document.getElementById('profile-height-input').value);
+      const w = parseFloat(document.getElementById('profile-weight-input').value);
+
+      if (!birth) {
+        showToast("請選擇出生年月");
+        return;
+      }
+      if (isNaN(h) || h <= 50 || h > 250) {
+        showToast("請輸入有效的身高數值 (50-250cm)");
+        return;
+      }
+      if (isNaN(w) || w <= 20 || w > 300) {
+        showToast("請輸入有效的體重數值 (20-300kg)");
+        return;
+      }
+
+      appState.userProfile.gender = selectedGender;
+      appState.userProfile.birthYearMonth = birth;
+      appState.userProfile.height = h;
+      appState.userProfile.weight = w;
+
+      recalculateUserProfileMetrics();
+      renderPulseReferenceTable();
+      closeProfileModal();
+      showToast("個人健康檔案已更新並完成年齡與 BMI 換算！");
+    }
+
+    /* ==============================================================
+       折線趨勢圖表繪製 (Chart.js)
+       ============================================================== */
+    function initBPTrendChart() {
+      const ctx = document.getElementById('bp-trend-chart').getContext('2d');
+      
+      // 將記錄按時間由舊到新排序以供趨勢圖呈現
+      const sortedRecords = [...appState.bpRecords].reverse();
+      const labels = sortedRecords.map(r => r.datetime.split(' ')[0].slice(5)); // 取 MM-DD
+      const sysData = sortedRecords.map(r => parseInt(r.systolic, 10));
+      const diaData = sortedRecords.map(r => parseInt(r.diastolic, 10));
+
+      appState.bpChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: '收縮壓(高壓)',
+              data: sysData,
+              borderColor: '#f43f5e',
+              backgroundColor: 'rgba(244, 63, 94, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 4,
+              pointBackgroundColor: '#f43f5e',
+              fill: false
+            },
+            {
+              label: '舒張壓(低壓)',
+              data: diaData,
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              borderWidth: 2.5,
+              tension: 0.35,
+              pointRadius: 4,
+              pointBackgroundColor: '#6366f1',
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false // 使用自訂圖例提升美感
+            },
+            tooltip: {
+              backgroundColor: '#1e293b',
+              titleFont: { size: 11 },
+              bodyFont: { size: 11 },
+              padding: 8,
+              cornerRadius: 8,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${context.parsed.y} mmHg`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { font: { size: 10 }, color: '#94a3b8' }
+            },
+            y: {
+              suggestedMin: 60,
+              suggestedMax: 150,
+              grid: { color: '#f1f5f9' },
+              ticks: { font: { size: 10 }, color: '#94a3b8', stepSize: 20 }
+            }
+          }
+        }
+      });
+
+      updateBPTrendChart();
+    }
+
+    function updateBPTrendChart() {
+      if (!appState.bpChartInstance) return;
+
+      const sortedRecords = [...appState.bpRecords].reverse();
+      const emptyMsg = document.getElementById('chart-empty-msg');
+
+      if (sortedRecords.length < 2) {
+        emptyMsg.classList.remove('hidden');
+      } else {
+        emptyMsg.classList.add('hidden');
+      }
+
+      const labels = sortedRecords.map(r => r.datetime.split(' ')[0].slice(5)); // MM-DD
+      const sysData = sortedRecords.map(r => parseInt(r.systolic, 10));
+      const diaData = sortedRecords.map(r => parseInt(r.diastolic, 10));
+
+      appState.bpChartInstance.data.labels = labels;
+      appState.bpChartInstance.data.datasets[0].data = sysData;
+      appState.bpChartInstance.data.datasets[1].data = diaData;
+      appState.bpChartInstance.update();
+    }
+
+    function refreshBPTimeToNow() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('bp-datetime').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+      showToast("已同步為當前時間");
+    }
+
+    function refreshDoctorTimeToNow() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('doc-datetime').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    }
+
+    /* ==============================================================
+       分頁 TAB 切換邏輯
+       ============================================================== */
+    function switchTab(tabId) {
+      appState.activeTab = tabId;
+      closeCustomNumpad();
+
+      // 隱藏所有分頁
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      // 顯示目標分頁
+      const targetPane = document.getElementById(`tab-${tabId}`);
+      if (targetPane) targetPane.classList.remove('hidden');
+
+      // 更新頂部標題
+      const titles = {
+        bp: '血壓與心率記錄',
+        workout: '運動與日常步數',
+        report: '健檢報告檔案夾',
+        doctor: '就診與看病筆記'
+      };
+      document.getElementById('page-title').textContent = titles[tabId] || '健康管理';
+
+      // 若切回血壓頁，重新適應圖表寬度
+      if (tabId === 'bp' && appState.bpChartInstance) {
+        setTimeout(() => appState.bpChartInstance.resize(), 50);
+      }
+
+      // 更新按鈕外觀高亮
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.classList.remove('text-blue-600', 'text-emerald-600', 'text-cyan-600', 'text-purple-600');
+        btn.classList.add('text-slate-400');
+        const span = btn.querySelector('span');
+        if (span) span.classList.remove('font-bold');
+      });
+
+      const activeBtn = document.getElementById(`nav-btn-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.remove('text-slate-400');
+        const themeColorClass = tabId === 'bp' ? 'text-blue-600' :
+                               tabId === 'workout' ? 'text-emerald-600' :
+                               tabId === 'report' ? 'text-cyan-600' : 'text-purple-600';
+        activeBtn.classList.add(themeColorClass);
+        const span = activeBtn.querySelector('span');
+        if (span) span.classList.add('font-bold');
+      }
+    }
+
+    /* ==============================================================
+       計算機大數字鍵盤核心邏輯
+       ============================================================== */
+    function activateCustomNumpad(fieldName) {
+      appState.activeNumpadField = fieldName;
+      
+      // 更新外框高亮聚焦
+      ['systolic', 'diastolic', 'pulse'].forEach(name => {
+        const box = document.getElementById(`box-${name}`);
+        if (box) {
+          if (name === fieldName) {
+            box.classList.remove('border-slate-200');
+            box.classList.add('border-blue-600', 'bg-blue-50/30', 'ring-2', 'ring-blue-100');
+          } else {
+            box.classList.remove('border-blue-600', 'bg-blue-50/30', 'ring-2', 'ring-blue-100');
+            box.classList.add('border-slate-200');
+          }
+        }
+      });
+
+      const labelMap = {
+        systolic: '收縮壓 (高壓)',
+        diastolic: '舒張壓 (低壓)',
+        pulse: '心跳率 (每分鐘脈搏)'
+      };
+      document.getElementById('numpad-target-name').textContent = `正在輸入：${labelMap[fieldName]}`;
+
+      const kb = document.getElementById('calculator-keyboard');
+      kb.classList.remove('hidden');
+
+      // 滾動內容避免鍵盤覆蓋
+      document.getElementById('main-content').classList.add('pb-72');
+    }
+
+    function closeCustomNumpad() {
+      appState.activeNumpadField = null;
+      document.getElementById('calculator-keyboard').classList.add('hidden');
+      document.getElementById('main-content').classList.remove('pb-72');
+
+      ['systolic', 'diastolic', 'pulse'].forEach(name => {
+        const box = document.getElementById(`box-${name}`);
+        if (box) {
+          box.classList.remove('border-blue-600', 'bg-blue-50/30', 'ring-2', 'ring-blue-100');
+          box.classList.add('border-slate-200');
+        }
+      });
+
+      evaluateBPStatus();
+    }
+
+    function pressNumKey(digit) {
+      if (!appState.activeNumpadField) return;
+      const cur = appState.bpValues[appState.activeNumpadField];
+      // 限制最多3位數
+      if (cur.length >= 3) return;
+      appState.bpValues[appState.activeNumpadField] = cur + digit;
+      updateBPDisplayValues();
+    }
+
+    function backspaceNumKey() {
+      if (!appState.activeNumpadField) return;
+      const cur = appState.bpValues[appState.activeNumpadField];
+      if (cur.length > 0) {
+        appState.bpValues[appState.activeNumpadField] = cur.slice(0, -1);
+        updateBPDisplayValues();
+      }
+    }
+
+    function clearCurrentNumpad() {
+      if (!appState.activeNumpadField) return;
+      appState.bpValues[appState.activeNumpadField] = '';
+      updateBPDisplayValues();
+    }
+
+    function nextNumpadField() {
+      if (appState.activeNumpadField === 'systolic') {
+        activateCustomNumpad('diastolic');
+      } else if (appState.activeNumpadField === 'diastolic') {
+        activateCustomNumpad('pulse');
+      } else {
+        closeCustomNumpad();
+      }
+    }
+
+    function updateBPDisplayValues() {
+      document.getElementById('val-systolic').textContent = appState.bpValues.systolic || '--';
+      document.getElementById('val-diastolic').textContent = appState.bpValues.diastolic || '--';
+      document.getElementById('val-pulse').textContent = appState.bpValues.pulse || '--';
+      evaluateBPStatus();
+    }
+
+    function evaluateBPStatus() {
+      const sys = parseInt(appState.bpValues.systolic, 10);
+      const dia = parseInt(appState.bpValues.diastolic, 10);
+      const badge = document.getElementById('bp-status-badge');
+
+      if (isNaN(sys) || isNaN(dia)) {
+        badge.classList.add('hidden');
+        return;
+      }
+
+      badge.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-700', 'bg-amber-50', 'text-amber-700', 'bg-rose-50', 'text-rose-700');
+
+      if (sys < 120 && dia < 80) {
+        badge.className = "rounded-xl p-3 text-center text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 block";
+        badge.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i>血壓標準理想（收縮壓 &lt; 120 且 舒張壓 &lt; 80）`;
+      } else if (sys <= 129 && dia < 80) {
+        badge.className = "rounded-xl p-3 text-center text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 block";
+        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i>血壓偏高（收縮壓 120-129），建議維持規律運動與少鹽飲食`;
+      } else if ((sys >= 130 && sys <= 139) || (dia >= 80 && dia <= 89)) {
+        badge.className = "rounded-xl p-3 text-center text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 block";
+        badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i>第一期高血壓警戒，請注意規律測量`;
+      } else {
+        badge.className = "rounded-xl p-3 text-center text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 block";
+        badge.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1"></i>第二期高血壓範圍（≥ 140 / ≥ 90），若持續請諮詢醫師`;
+      }
+    }
+
+    function saveBPRecord() {
+      const sys = appState.bpValues.systolic;
+      const dia = appState.bpValues.diastolic;
+      const pulse = appState.bpValues.pulse;
+      const timeVal = document.getElementById('bp-datetime').value;
+
+      if (!sys || !dia || !pulse) {
+        showToast("請先點選卡片完整輸入高壓、低壓與心跳！");
+        return;
+      }
+
+      const newRecord = {
+        id: Date.now(),
+        datetime: timeVal ? timeVal.replace('T', ' ') : '剛剛',
+        systolic: sys,
+        diastolic: dia,
+        pulse: pulse
+      };
+
+      appState.bpRecords.unshift(newRecord);
+      renderBPHistory();
+      updateBPTrendChart(); // 更新折線圖
+      closeCustomNumpad();
+
+      // 清空數值準備下次使用
+      appState.bpValues.systolic = '';
+      appState.bpValues.diastolic = '';
+      appState.bpValues.pulse = '';
+      updateBPDisplayValues();
+      showToast("已成功保存血壓記錄並更新趨勢曲線！");
+    }
+
+    function renderBPHistory() {
+      const list = document.getElementById('bp-history-list');
+      const countLabel = document.getElementById('bp-count-label');
+      countLabel.textContent = `${appState.bpRecords.length} 筆記錄`;
+
+      if (appState.bpRecords.length === 0) {
+        list.innerHTML = `<div class="text-slate-400 text-center py-4">尚無記錄，點選上方卡片以鍵盤輸入</div>`;
+        return;
+      }
+
+      list.innerHTML = appState.bpRecords.map(item => `
+        <div class="py-2 flex items-center justify-between">
+          <div>
+            <div class="font-bold text-slate-700 text-xs">${item.datetime}</div>
+            <div class="text-[11px] text-slate-500">脈搏: <span class="font-semibold text-emerald-600">${item.pulse}</span> BPM</div>
+          </div>
+          <div class="text-right">
+            <span class="text-sm font-extrabold text-slate-800">${item.systolic} / ${item.diastolic}</span>
+            <span class="text-[10px] text-slate-400 block">mmHg</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* ==============================================================
+       心跳參考表互動切換與個人年齡層自動高亮標註
+       ============================================================== */
+    function togglePulseTableGender(gender) {
+      appState.currentPulseGender = gender;
+      updateGenderBtnVisuals();
+      renderPulseReferenceTable();
+    }
+
+    function updateGenderBtnVisuals() {
+      const btnM = document.getElementById('gender-btn-m');
+      const btnF = document.getElementById('gender-btn-f');
+
+      if (appState.currentPulseGender === 'male') {
+        btnM.className = "py-1.5 rounded-lg bg-white text-blue-600 shadow-sm transition";
+        btnF.className = "py-1.5 rounded-lg text-slate-500 transition";
+      } else {
+        btnF.className = "py-1.5 rounded-lg bg-white text-rose-600 shadow-sm transition";
+        btnM.className = "py-1.5 rounded-lg text-slate-500 transition";
+      }
+    }
+
+    function renderPulseReferenceTable() {
+      const data = pulseReferenceData[appState.currentPulseGender];
+      const tbody = document.getElementById('pulse-ref-tbody');
+      const userAge = appState.calculatedAge;
+      const isUserGender = appState.currentPulseGender === appState.userProfile.gender;
+
+      tbody.innerHTML = data.map(row => {
+        // 判定使用者是否落在此年齡區間且性別相同
+        const isMatched = isUserGender && (userAge >= row.minAge && userAge <= row.maxAge);
+        const rowClass = isMatched ? "bg-blue-50/80 font-bold border-l-4 border-blue-500" : "";
+        const tag = isMatched ? `<span class="ml-1 text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full">您</span>` : "";
+
+        return `
+          <tr class="${rowClass}">
+            <td class="py-2 pl-1">${row.label} ${tag}</td>
+            <td class="py-2 text-emerald-600">${row.athletic}</td>
+            <td class="py-2 text-blue-600">${row.normal}</td>
+            <td class="py-2 text-amber-600">${row.high}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    /* ==============================================================
+       運動與步數邏輯 (含 Google Fit 模擬串接)
+       ============================================================== */
+    function toggleGoogleFitSync() {
+      const btn = document.getElementById('fit-connect-btn');
+      const status = document.getElementById('fit-sync-status');
+
+      if (!appState.googleFitConnected) {
+        // 模擬串接與授權 API
+        btn.textContent = "連線中...";
+        btn.disabled = true;
+
+        setTimeout(() => {
+          appState.googleFitConnected = true;
+          // 模擬從 Google Fit 讀取當天步數
+          const simulatedFitSteps = 8420;
+          appState.dailySteps = simulatedFitSteps;
+          updateStepsDisplay();
+
+          btn.textContent = "已連線";
+          btn.className = "text-xs bg-emerald-800 text-emerald-100 font-bold px-3 py-1.5 rounded-xl shadow transition";
+          status.textContent = "已與 Google 帳戶步數即時同步";
+          btn.disabled = false;
+          showToast("已成功授權串接 Google Fit，同步 8,420 步！");
+        }, 800);
+      } else {
+        appState.googleFitConnected = false;
+        btn.textContent = "連接同步";
+        btn.className = "text-xs bg-white text-emerald-700 font-bold px-3 py-1.5 rounded-xl shadow hover:bg-emerald-50 active:scale-95 transition";
+        status.textContent = "未連接健康服務";
+        showToast("已解除 Google Fit 步數同步");
+      }
+    }
+
+    function applyManualSteps() {
+      const val = parseInt(document.getElementById('input-steps').value, 10);
+      if (isNaN(val) || val < 0) {
+        showToast("請輸入正確的步數數值");
+        return;
+      }
+      appState.dailySteps = val;
+      updateStepsDisplay();
+      document.getElementById('input-steps').value = '';
+      showToast(`今日步數已更新為 ${val.toLocaleString()} 步`);
+    }
+
+    function updateStepsDisplay() {
+      document.getElementById('disp-steps').textContent = appState.dailySteps.toLocaleString();
+      const pct = Math.min(100, Math.round((appState.dailySteps / 10000) * 100));
+      document.getElementById('steps-progress-bar').style.width = `${pct}%`;
+    }
+
+    function saveWorkoutRecord() {
+      const type = document.getElementById('workout-type').value;
+      const duration = parseInt(document.getElementById('workout-duration').value, 10);
+      const note = document.getElementById('workout-note').value.trim();
+
+      if (isNaN(duration) || duration <= 0) {
+        showToast("請輸入有效的運動時長（分鐘）");
+        return;
+      }
+
+      // 估算大卡 (粗估 1分鐘 7大卡)
+      const calories = Math.round(duration * 6.8);
+
+      const record = {
+        id: Date.now(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        type: type,
+        duration: duration,
+        calories: calories,
+        note: note
+      };
+
+      appState.workoutRecords.unshift(record);
+      renderWorkoutHistory();
+
+      // 清空欄位
+      document.getElementById('workout-duration').value = '';
+      document.getElementById('workout-note').value = '';
+      showToast(`已儲存運動！燃燒約 ${calories} 大卡`);
+    }
+
+    function renderWorkoutHistory() {
+      const list = document.getElementById('workout-history-list');
+      const count = document.getElementById('workout-count-label');
+      count.textContent = `${appState.workoutRecords.length} 筆記錄`;
+
+      if (appState.workoutRecords.length === 0) {
+        list.innerHTML = `<div class="text-slate-400 text-center py-4">今天還沒有運動記錄，趕快動一動吧！</div>`;
+        return;
+      }
+
+      list.innerHTML = appState.workoutRecords.map(item => `
+        <div class="py-2.5 flex items-start justify-between">
+          <div>
+            <div class="font-bold text-slate-800 text-xs flex items-center">
+              <span>${item.type}</span>
+              <span class="ml-2 text-[10px] font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">${item.duration} 分鐘</span>
+            </div>
+            ${item.note ? `<p class="text-[11px] text-slate-500 mt-0.5">${item.note}</p>` : ''}
+          </div>
+          <div class="text-right">
+            <span class="text-xs font-bold text-emerald-600">~${item.calories} kcal</span>
+            <span class="text-[10px] text-slate-400 block">${item.time}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* ==============================================================
+       健康檢查報告存檔與照片預覽邏輯
+       ============================================================== */
+    function previewReportImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        appState.uploadedReportBase64 = e.target.result;
+        document.getElementById('image-preview').src = e.target.result;
+        document.getElementById('image-preview-container').classList.remove('hidden');
+        document.getElementById('image-upload-placeholder').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearReportImage(e) {
+      if (e) e.stopPropagation();
+      appState.uploadedReportBase64 = null;
+      document.getElementById('report-file-input').value = '';
+      document.getElementById('image-preview').src = '#';
+      document.getElementById('image-preview-container').classList.add('hidden');
+      document.getElementById('image-upload-placeholder').classList.remove('hidden');
+    }
+
+    function saveHealthReport() {
+      const date = document.getElementById('report-date').value;
+      const org = document.getElementById('report-org').value.trim() || '常規體檢';
+      const notes = document.getElementById('report-text-notes').value.trim();
+      const image = appState.uploadedReportBase64;
+
+      if (!notes && !image) {
+        showToast("請至少輸入健檢摘要文字或上傳報告照片！");
+        return;
+      }
+
+      const report = {
+        id: Date.now(),
+        date: date || new Date().toISOString().split('T')[0],
+        org: org,
+        notes: notes || '（未填寫文字筆記）',
+        image: image
+      };
+
+      appState.healthReports.unshift(report);
+      renderReportHistory();
+
+      // 重設表單
+      document.getElementById('report-org').value = '';
+      document.getElementById('report-text-notes').value = '';
+      clearReportImage();
+      showToast("健檢報告已歸檔儲存！");
+    }
+
+    function renderReportHistory() {
+      const list = document.getElementById('report-history-list');
+      const count = document.getElementById('report-count-label');
+      count.textContent = `${appState.healthReports.length} 份檔案`;
+
+      if (appState.healthReports.length === 0) {
+        list.innerHTML = `<div class="text-slate-400 text-center py-4">目前尚無上傳的健檢報告</div>`;
+        return;
+      }
+
+      list.innerHTML = appState.healthReports.map(item => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800 text-xs"><i class="fa-solid fa-hospital mr-1 text-cyan-600"></i>${item.org}</span>
+            <span class="text-[11px] text-slate-500 font-medium">${item.date}</span>
+          </div>
+          <p class="text-xs text-slate-700 leading-relaxed whitespace-pre-line bg-white p-2 rounded-lg border border-slate-100">${item.notes}</p>
+          ${item.image ? `
+            <div class="pt-1">
+              <span class="text-[10px] text-slate-400 block mb-1">附加報告圖檔：</span>
+              <img src="${item.image}" alt="報告照片" class="h-24 rounded-lg object-cover border border-slate-200">
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    /* ==============================================================
+       就診病歷與處方紀錄邏輯
+       ============================================================== */
+    function saveDoctorVisit() {
+      const dt = document.getElementById('doc-datetime').value;
+      const clinic = document.getElementById('doc-clinic').value.trim() || '診所門診';
+      const reason = document.getElementById('doc-reason').value.trim();
+      const prescription = document.getElementById('doc-prescription').value.trim();
+
+      if (!reason) {
+        showToast("請填寫看病原因或不適症狀！");
+        return;
+      }
+
+      const visit = {
+        id: Date.now(),
+        datetime: dt ? dt.replace('T', ' ') : '近期',
+        clinic: clinic,
+        reason: reason,
+        prescription: prescription || '遵照醫囑休息與按時服藥'
+      };
+
+      appState.doctorVisits.unshift(visit);
+      renderDoctorHistory();
+
+      // 清空表單
+      document.getElementById('doc-clinic').value = '';
+      document.getElementById('doc-reason').value = '';
+      document.getElementById('doc-prescription').value = '';
+      refreshDoctorTimeToNow();
+      showToast("看診紀錄儲存成功！");
+    }
+
+    function renderDoctorHistory() {
+      const list = document.getElementById('doctor-history-list');
+      const count = document.getElementById('doctor-count-label');
+      count.textContent = `${appState.doctorVisits.length} 次就診`;
+
+      if (appState.doctorVisits.length === 0) {
+        list.innerHTML = `<div class="text-slate-400 text-center py-4">尚無就診紀錄</div>`;
+        return;
+      }
+
+      list.innerHTML = appState.doctorVisits.map(item => `
+        <div class="p-3 bg-purple-50/50 border border-purple-100 rounded-xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800 text-xs text-purple-900"><i class="fa-solid fa-stethoscope mr-1 text-purple-600"></i>${item.clinic}</span>
+            <span class="text-[11px] text-slate-500">${item.datetime}</span>
+          </div>
+          <div>
+            <div class="text-[11px] font-semibold text-rose-600">就醫主訴 / 症狀：</div>
+            <p class="text-xs text-slate-700">${item.reason}</p>
+          </div>
+          <div class="bg-white p-2 rounded-lg border border-purple-100 text-xs">
+            <div class="text-[11px] font-semibold text-purple-700 mb-0.5"><i class="fa-solid fa-pills mr-1"></i>醫師診斷與處方：</div>
+            <p class="text-slate-600 leading-relaxed whitespace-pre-line">${item.prescription}</p>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /* ==============================================================
+       Toast 浮動通知提示 (取代不友善的 alert)
+       ============================================================== */
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById('toast-msg');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.add('hidden');
+      }, 2400);
+    }
+
+    /* ==============================================================
+       初始化示範資料 (讓一開啟畫面即具豐富展示度)
+       ============================================================== */
+    function initSampleData() {
+      // 範例血壓多筆歷史記錄（按時間排序，展現折線曲線走向）
+      appState.bpRecords = [
+        { id: 4, datetime: "2026-10-26 21:00", systolic: "121", diastolic: "78", pulse: "70" },
+        { id: 3, datetime: "2026-10-25 08:30", systolic: "128", diastolic: "82", pulse: "75" },
+        { id: 2, datetime: "2026-10-24 19:45", systolic: "124", diastolic: "79", pulse: "72" },
+        { id: 1, datetime: "2026-10-23 08:15", systolic: "118", diastolic: "76", pulse: "68" }
+      ];
+      renderBPHistory();
+
+      // 範例運動
+      appState.workoutRecords = [
+        { id: 1, time: "07:15", type: "快走", duration: 30, calories: 204, note: "晨間河濱公園快走" }
+      ];
+      renderWorkoutHistory();
+
+      // 範例看診
+      appState.doctorVisits = [
+        {
+          id: 1,
+          datetime: "2026-10-15 14:30",
+          clinic: "聯合家醫科診所",
+          reason: "季節交替喉嚨乾癢、鼻塞",
+          prescription: "過敏性鼻炎口服藥 3 天，早晚飯後一包。建議維持室內濕度 55% 並配戴口罩。"
+        }
+      ];
+      renderDoctorHistory();
+    }
+  </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('sw.js').catch(function (e) {
+                    console.warn('SW registration failed', e);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
